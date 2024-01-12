@@ -1,35 +1,17 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 import requests
-from bs4 import BeautifulSoup
+from waitress import serve
 
 app = Flask(__name__)
 
-def get_google_suggestions(query):
-    base_url = "https://www.google.com/complete/search"
-    params = {
-        "q": query,
-        "output": "toolbar",
-        "hl": "en",  # Set the desired language
-    }
-
-    response = requests.get(base_url, params=params)
-    soup = BeautifulSoup(response.content, 'html.parser')
+@app.route('/<query>', methods=['GET'])
+def autocomplete(query):
+    url = f"https://suggestqueries.google.com/complete/search?client=firefox&q={query}"
+    response = requests.get(url)
+    suggestions = response. json()[1]
     
-    # Extract suggestions from the response
-    suggestions = [item.get('data') for item in soup.find_all('suggestion')]
+    return jsonify(suggestions)
 
-    return suggestions
-
-@app.route('/get_suggestions', methods=['GET'])
-def get_suggestions():
-    query = request.args.get('query')
-
-    if not query:
-        return jsonify({'error': 'Missing query parameter'}), 400
-
-    suggestions = get_google_suggestions(query)
-    
-    return jsonify({'suggestions': suggestions})
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
+serve(app, host='0.0.0.0', port=8080)
